@@ -81,6 +81,18 @@
     border-top: 1px solid var(--line); padding-top: 10px;
   }
   .card .foot .dim { color: var(--muted); }
+  .card .actions { display: flex; gap: 8px; }
+  .btn {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 500;
+    padding: 8px 10px; border-radius: 8px; cursor: pointer; text-decoration: none;
+    color: var(--ink); background: var(--surface-2); border: 1px solid var(--line-strong);
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:active { transform: translateY(1px); }
+  .btn.ok { border-color: var(--copilot); color: var(--copilot); }
+  .btn svg { width: 14px; height: 14px; }
 
   .empty, .err {
     margin-top: 48px; padding: 40px; text-align: center; border: 1px dashed var(--line-strong);
@@ -164,6 +176,16 @@ function render(items) {
         <figcaption class="body">
           <p class="prompt">${esc(it.prompt)}</p>
           <div class="foot"><span class="dim">${esc(dim)}</span><span>${esc(time)}</span></div>
+          <div class="actions">
+            <button class="btn" data-act="copy" data-src="images/${esc(it.file)}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              복사
+            </button>
+            <a class="btn" data-act="download" href="images/${esc(it.file)}" download="${esc(it.file)}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              다운로드
+            </a>
+          </div>
         </figcaption>`;
       grid.appendChild(card);
     }
@@ -173,6 +195,39 @@ function render(items) {
   gallery.innerHTML = '';
   gallery.appendChild(frag);
 }
+
+function flash(btn, text) {
+  const original = btn.innerHTML;
+  btn.innerHTML = esc(text);
+  btn.classList.add('ok');
+  setTimeout(() => { btn.innerHTML = original; btn.classList.remove('ok'); }, 1400);
+}
+
+async function toPng(blob) {
+  // Clipboard image writing wants PNG; redraw anything else through a canvas.
+  const bmp = await createImageBitmap(blob);
+  const c = document.createElement('canvas');
+  c.width = bmp.width; c.height = bmp.height;
+  c.getContext('2d').drawImage(bmp, 0, 0);
+  return await new Promise(res => c.toBlob(res, 'image/png'));
+}
+
+// Copy an image to the clipboard (delegated; survives re-render since it is bound
+// to the persistent container). Download is a plain same-origin <a download>.
+document.getElementById('gallery').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act="copy"]');
+  if (!btn) return;
+  e.preventDefault();
+  try {
+    const blob = await (await fetch(btn.dataset.src, { cache: 'force-cache' })).blob();
+    const png = /png/i.test(blob.type) ? blob : await toPng(blob);
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    flash(btn, '복사됨 ✓');
+  } catch (err) {
+    try { await navigator.clipboard.writeText(new URL(btn.dataset.src, location.href).href); flash(btn, 'URL 복사됨'); }
+    catch { flash(btn, '복사 실패'); }
+  }
+});
 
 fetch('images.json', { cache: 'no-store' })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
