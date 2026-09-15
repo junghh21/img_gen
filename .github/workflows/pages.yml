@@ -1,0 +1,53 @@
+name: Build gallery
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A burst of image PUTs makes several commits in a row; keep only the last build.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images.json from per-image sidecars
+        run: |
+          python3 - <<'PY'
+          import json, glob, os
+          items = []
+          for f in sorted(glob.glob('images/*.json')):
+              try:
+                  with open(f, encoding='utf-8') as fh:
+                      items.append(json.load(fh))
+              except Exception as e:
+                  print('skip', f, e)
+          # newest first; the client groups by date
+          items.sort(key=lambda x: x.get('date', ''), reverse=True)
+          with open('images.json', 'w', encoding='utf-8') as fh:
+              json.dump(items, fh, ensure_ascii=False, indent=1)
+          print(len(items), 'images indexed')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

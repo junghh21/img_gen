@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>생성 이미지 갤러리</title>
+<meta name="description" content="advisor-mcp가 Gemini·Qwen·Copilot·ChatGPT 웹 세션으로 생성한 이미지 — 날짜별 갤러리." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+<style>
+  :root {
+    --ground: #0a0c11;
+    --surface: #12151b;
+    --surface-2: #171b22;
+    --ink: #e7eaef;
+    --muted: #99a2b2;
+    --faint: #6d7688;
+    --line: #242a35;
+    --line-strong: #313947;
+    --accent: #38cdd4;
+    --accent-2: #ff5c8a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 18px 40px -18px rgba(0,0,0,.65);
+    --gemini: #6ea8fe;
+    --qwen: #b98cff;
+    --copilot: #48d597;
+    --chatgpt: #ffa94d;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: "IBM Plex Sans KR", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; line-height: 1.55;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding-block: clamp(28px, 5vw, 56px); padding-left: 20px; padding-right: 20px; }
+
+  header .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 10px; margin: 0 0 14px;
+  }
+  header .eyebrow::before { content: ""; width: 26px; height: 1px; background: var(--accent); display: inline-block; }
+  h1 { font-family: "Chakra Petch", "IBM Plex Sans KR", sans-serif; font-weight: 700; font-size: clamp(28px, 5.4vw, 46px); letter-spacing: -.01em; margin: 0; }
+  .lede { color: var(--muted); max-width: 62ch; margin: 14px 0 0; font-size: 15px; }
+  .count { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--faint); margin-top: 10px; }
+  .count b { color: var(--muted); font-weight: 500; }
+
+  .daygroup { margin-top: 40px; }
+  .dayhead {
+    position: sticky; top: 0; z-index: 5; display: flex; align-items: baseline; gap: 12px;
+    padding: 12px 0; margin: 0 0 16px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(var(--ground) 70%, rgba(10,12,17,0));
+  }
+  .dayhead h2 { font-family: "Chakra Petch", sans-serif; font-weight: 600; font-size: 20px; margin: 0; letter-spacing: .01em; }
+  .dayhead .n { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--faint); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column;
+  }
+  .card .imgwrap { position: relative; background: #05070b; display: flex; }
+  .card .imgwrap img { display: block; width: 100%; height: auto; }
+  .card .badge {
+    position: absolute; left: 10px; top: 10px;
+    font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .04em;
+    padding: 3px 9px; border-radius: 999px; color: #05070b; font-weight: 600;
+    background: var(--accent);
+  }
+  .card .badge[data-p="gemini"] { background: var(--gemini); }
+  .card .badge[data-p="qwen"] { background: var(--qwen); }
+  .card .badge[data-p="copilot"] { background: var(--copilot); }
+  .card .badge[data-p="chatgpt"] { background: var(--chatgpt); }
+  .card .body { padding: 13px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .card .prompt { font-size: 14px; color: var(--ink); margin: 0; }
+  .card .foot {
+    display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+    font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--faint);
+    border-top: 1px solid var(--line); padding-top: 10px;
+  }
+  .card .foot .dim { color: var(--muted); }
+
+  .empty, .err {
+    margin-top: 48px; padding: 40px; text-align: center; border: 1px dashed var(--line-strong);
+    border-radius: 14px; color: var(--muted); font-size: 15px;
+  }
+  .empty code, .err code { font-family: "JetBrains Mono", monospace; color: var(--accent); font-size: 13px; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">advisor-mcp · image gallery</p>
+    <h1>생성 이미지 갤러리</h1>
+    <p class="lede">외부자문 서비스(advisor-mcp)가 실제 로그인된 브라우저 세션으로 Gemini · Qwen · Copilot · ChatGPT에 프롬프트를 보내 생성한 이미지. 생성될 때마다 GitHub Contents API로 이 저장소에 올라가고, 빌드 시점에 <code>images.json</code>이 뽑혀 서빙됩니다.</p>
+    <p class="count" id="count"></p>
+  </header>
+
+  <main id="gallery"></main>
+
+  <footer>advisor-mcp @ NucBox · 정적 갤러리 · GitHub Pages</footer>
+</div>
+
+<script>
+const PROVIDERS = { gemini: 'Gemini', qwen: 'Qwen', copilot: 'Copilot', chatgpt: 'ChatGPT' };
+
+function fmtDay(key) {
+  // key = YYYY-MM-DD
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const wd = ['일','월','화','수','목','금','토'][dt.getUTCDay()];
+  return `${y}년 ${m}월 ${d}일 (${wd})`;
+}
+function dayKey(iso) { return (iso || '').slice(0, 10) || '날짜 미상'; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function render(items) {
+  const gallery = document.getElementById('gallery');
+  const countEl = document.getElementById('count');
+  if (!Array.isArray(items) || items.length === 0) {
+    gallery.innerHTML = '<div class="empty">아직 생성된 이미지가 없습니다. 서비스가 이미지를 만들면 <code>images/</code>에 올라가고 여기 나타납니다.</div>';
+    countEl.textContent = '';
+    return;
+  }
+  items.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  const byDay = new Map();
+  for (const it of items) {
+    const k = dayKey(it.date);
+    if (!byDay.has(k)) byDay.set(k, []);
+    byDay.get(k).push(it);
+  }
+  const providers = new Set(items.map(i => i.provider));
+  countEl.innerHTML = `<b>${items.length}</b>개 이미지 · <b>${byDay.size}</b>일 · 모델 ${[...providers].map(p => PROVIDERS[p] || p).join(' · ')}`;
+
+  const frag = document.createDocumentFragment();
+  for (const [k, arr] of byDay) {
+    const group = document.createElement('section');
+    group.className = 'daygroup';
+    const head = document.createElement('div');
+    head.className = 'dayhead';
+    head.innerHTML = `<h2>${k === '날짜 미상' ? k : fmtDay(k)}</h2><span class="n">${arr.length}개</span>`;
+    group.appendChild(head);
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    for (const it of arr) {
+      const card = document.createElement('figure');
+      card.className = 'card';
+      card.style.margin = '0';
+      const p = it.provider || '';
+      const label = PROVIDERS[p] || p || '?';
+      const dim = (it.width && it.height) ? `${it.width}×${it.height}` : '';
+      const t = it.date ? new Date(it.date) : null;
+      const time = t && !isNaN(t) ? t.toISOString().slice(11, 16) + ' UTC' : '';
+      card.innerHTML = `
+        <div class="imgwrap">
+          <span class="badge" data-p="${esc(p)}">${esc(label)}</span>
+          <img loading="lazy" src="images/${esc(it.file)}" alt="${esc(it.prompt)}" />
+        </div>
+        <figcaption class="body">
+          <p class="prompt">${esc(it.prompt)}</p>
+          <div class="foot"><span class="dim">${esc(dim)}</span><span>${esc(time)}</span></div>
+        </figcaption>`;
+      grid.appendChild(card);
+    }
+    group.appendChild(grid);
+    frag.appendChild(group);
+  }
+  gallery.innerHTML = '';
+  gallery.appendChild(frag);
+}
+
+fetch('images.json', { cache: 'no-store' })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(render)
+  .catch(err => {
+    document.getElementById('gallery').innerHTML =
+      '<div class="err"><code>images.json</code>을 아직 불러올 수 없습니다 (' + esc(err.message) +
+      '). 첫 이미지가 올라가고 Actions 빌드가 끝나면 표시됩니다.</div>';
+  });
+</script>
+</body>
+</html>
